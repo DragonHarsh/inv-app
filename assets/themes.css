@@ -1,0 +1,63 @@
+/* Dark Theme Variables */
+.dark-theme {
+    --primary-color: #3b82f6;
+    --primary-hover: #2563eb;
+    --secondary-color: #94a3b8;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --error-color: #ef4444;
+    --info-color: #06b6d4;
+    
+    --bg-primary: #1e293b;
+    --bg-secondary: #0f172a;
+    --bg-tertiary: #334155;
+    
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-muted: #64748b;
+    
+    --border-color: #334155;
+    --border-hover: #475569;
+    
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
+}
+
+.dark-theme .login-screen {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+.dark-theme .table tbody tr:hover {
+    background: var(--bg-tertiary);
+}
+
+.dark-theme .nav-item:hover {
+    background: var(--bg-tertiary);
+}
+
+.dark-theme .status-expired {
+    color: #fca5a5;
+}
+
+.dark-theme .status-near-expiry {
+    color: #fcd34d;
+}
+
+.dark-theme .status-low-stock {
+    color: #fde047;
+}
+
+.dark-theme .status-in-stock {
+    color: #6ee7b7;
+}
+
+.theme-switching {
+    animation: themeSwitch 0.3s ease-in-out;
+}
+
+@keyframes themeSwitch {
+    0% { opacity: 0.8; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
