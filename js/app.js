@@ -825,11 +825,43 @@ class App {
     }
 
     loadInventoryData() {
-        // Will be implemented with actual data service
         setTimeout(() => {
             const tbody = document.getElementById('inventory-table-body');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No inventory items found. <a href="#" onclick="app.showAddItemModal()" class="text-primary">Add your first item</a></td></tr>';
+                const inventory = window.dataService.getInventory();
+                
+                if (inventory.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No inventory items found. <a href="#" onclick="app.showAddItemModal()" class="text-primary">Add your first item</a></td></tr>';
+                } else {
+                    tbody.innerHTML = inventory.map(item => {
+                        const status = window.dataService.getItemStatus(item);
+                        const statusClass = `status-${status}`;
+                        const statusText = status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        
+                        return `
+                            <tr>
+                                <td>${item.name}</td>
+                                <td>${item.category}</td>
+                                <td>${item.stock} ${item.unit}</td>
+                                <td>₹${parseFloat(item.buyPrice).toFixed(2)}</td>
+                                <td>₹${parseFloat(item.sellPrice).toFixed(2)}</td>
+                                <td>${item.expDate ? new Date(item.expDate).toLocaleDateString() : 'N/A'}</td>
+                                <td><span class="badge badge-${status}">${statusText}</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-secondary" onclick="app.viewItemDetails('${item.id}')">View</button>
+                                    <button class="btn btn-sm btn-secondary" onclick="app.editItem('${item.id}')">Edit</button>
+                                    <button class="btn btn-sm btn-error" onclick="app.deleteItem('${item.id}')">Delete</button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+                
+                // Update counts
+                const totalCount = document.getElementById('total-count');
+                const showingCount = document.getElementById('showing-count');
+                if (totalCount) totalCount.textContent = inventory.length;
+                if (showingCount) showingCount.textContent = inventory.length;
             }
         }, 500);
     }
@@ -842,7 +874,44 @@ class App {
         setTimeout(() => {
             const grid = document.getElementById('customers-grid');
             if (grid) {
-                grid.innerHTML = '<div class="text-center py-8"><p>No customers found. <a href="#" onclick="app.showAddCustomerModal()" class="text-primary">Add your first customer</a></p></div>';
+                const customers = window.dataService.getCustomers();
+                
+                if (customers.length === 0) {
+                    grid.innerHTML = '<div class="text-center py-8"><p>No customers found. <a href="#" onclick="app.showAddCustomerModal()" class="text-primary">Add your first customer</a></p></div>';
+                } else {
+                    grid.innerHTML = customers.map(customer => `
+                        <div class="card">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <h4 class="font-bold text-lg">${customer.name}</h4>
+                                    <p class="text-secondary">📱 ${customer.mobile}</p>
+                                    ${customer.email ? `<p class="text-secondary">📧 ${customer.email}</p>` : ''}
+                                    ${customer.address ? `<p class="text-secondary">📍 ${customer.address}</p>` : ''}
+                                    <div class="mt-2">
+                                        <span class="badge badge-${customer.type === 'vip' ? 'in-stock' : 'low-stock'}">${customer.type.toUpperCase()}</span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm text-secondary">Total Visits: ${customer.totalVisits || 0}</p>
+                                    <p class="text-sm text-secondary">Total Spent: ₹${(customer.totalSpent || 0).toFixed(2)}</p>
+                                    ${customer.lastVisit ? `<p class="text-sm text-secondary">Last Visit: ${new Date(customer.lastVisit).toLocaleDateString()}</p>` : ''}
+                                    ${customer.nextVisit ? `<p class="text-sm text-secondary">Next Visit: ${new Date(customer.nextVisit).toLocaleDateString()}</p>` : ''}
+                                </div>
+                            </div>
+                            ${customer.medicalSummary ? `
+                                <div class="mt-3 p-2 bg-secondary rounded">
+                                    <p class="text-sm"><strong>Medical Summary:</strong> ${customer.medicalSummary}</p>
+                                </div>
+                            ` : ''}
+                            <div class="flex gap-2 mt-3">
+                                <button class="btn btn-sm btn-primary" onclick="app.addVisit('${customer.id}')">Add Visit</button>
+                                <button class="btn btn-sm btn-secondary" onclick="app.viewCustomerHistory('${customer.id}')">View History</button>
+                                <button class="btn btn-sm btn-secondary" onclick="app.editCustomer('${customer.id}')">Edit</button>
+                                <button class="btn btn-sm btn-error" onclick="app.deleteCustomer('${customer.id}')">Delete</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
             }
         }, 500);
     }
@@ -1007,17 +1076,71 @@ class App {
         ]);
     }
 
-    // Placeholder save methods
+    // Save methods with actual data service integration
     saveNewItem() {
-        this.showToast('Item added successfully!', 'success');
-        this.closeModal();
-        this.loadInventoryData();
+        try {
+            // Get form data
+            const itemData = {
+                name: document.getElementById('item-name').value,
+                category: document.getElementById('item-category').value,
+                buyPrice: document.getElementById('item-buy-price').value,
+                sellPrice: document.getElementById('item-sell-price').value,
+                stock: document.getElementById('item-stock').value,
+                unit: document.getElementById('item-unit').value,
+                mfgDate: document.getElementById('item-mfg-date').value,
+                expDate: document.getElementById('item-exp-date').value,
+                supplier: document.getElementById('item-supplier').value,
+                batchNo: document.getElementById('item-batch').value,
+                lowStockThreshold: document.getElementById('item-threshold').value,
+                note: document.getElementById('item-note').value
+            };
+
+            // Validate required fields
+            if (!itemData.name || !itemData.category || !itemData.buyPrice || !itemData.sellPrice || !itemData.stock) {
+                this.showToast('Please fill all required fields!', 'error');
+                return;
+            }
+
+            // Save to data service
+            const newItem = window.dataService.addInventoryItem(itemData);
+            this.showToast('Item added successfully!', 'success');
+            this.closeModal();
+            this.loadInventoryData();
+            
+        } catch (error) {
+            console.error('Error saving item:', error);
+            this.showToast('Error adding item: ' + error.message, 'error');
+        }
     }
 
     saveNewCustomer() {
-        this.showToast('Customer added successfully!', 'success');
-        this.closeModal();
-        this.loadCustomersData();
+        try {
+            // Get form data
+            const customerData = {
+                name: document.getElementById('customer-name').value,
+                mobile: document.getElementById('customer-mobile').value,
+                type: document.getElementById('customer-type').value,
+                email: document.getElementById('customer-email').value,
+                address: document.getElementById('customer-address').value,
+                medicalSummary: document.getElementById('customer-medical').value
+            };
+
+            // Validate required fields
+            if (!customerData.name || !customerData.mobile) {
+                this.showToast('Please fill all required fields!', 'error');
+                return;
+            }
+
+            // Save to data service
+            const newCustomer = window.dataService.addCustomer(customerData);
+            this.showToast('Customer added successfully!', 'success');
+            this.closeModal();
+            this.loadCustomersData();
+            
+        } catch (error) {
+            console.error('Error saving customer:', error);
+            this.showToast('Error adding customer: ' + error.message, 'error');
+        }
     }
 
     saveShopSettings() {
@@ -1060,6 +1183,71 @@ class App {
         if (input && input.value.trim()) {
             this.showToast(`Unit "${input.value}" added successfully!`, 'success');
             input.value = '';
+        }
+    }
+
+    // Additional action methods for inventory and customers
+    viewItemDetails(itemId) {
+        const item = window.dataService.getInventory().find(i => i.id === itemId);
+        if (item) {
+            this.showModal('Item Details', `
+                <div class="space-y-3">
+                    <div><strong>Name:</strong> ${item.name}</div>
+                    <div><strong>Category:</strong> ${item.category}</div>
+                    <div><strong>Stock:</strong> ${item.stock} ${item.unit}</div>
+                    <div><strong>Buy Price:</strong> ₹${parseFloat(item.buyPrice).toFixed(2)}</div>
+                    <div><strong>Sell Price:</strong> ₹${parseFloat(item.sellPrice).toFixed(2)}</div>
+                    <div><strong>Supplier:</strong> ${item.supplier || 'N/A'}</div>
+                    <div><strong>Batch No:</strong> ${item.batchNo || 'N/A'}</div>
+                    <div><strong>Manufacturing Date:</strong> ${item.mfgDate ? new Date(item.mfgDate).toLocaleDateString() : 'N/A'}</div>
+                    <div><strong>Expiry Date:</strong> ${item.expDate ? new Date(item.expDate).toLocaleDateString() : 'N/A'}</div>
+                    <div><strong>Low Stock Threshold:</strong> ${item.lowStockThreshold}</div>
+                    ${item.note ? `<div><strong>Note:</strong> ${item.note}</div>` : ''}
+                    <div><strong>Created:</strong> ${new Date(item.createdAt).toLocaleString()}</div>
+                </div>
+            `, [
+                { text: 'Close', class: 'btn-secondary', onclick: 'app.closeModal()' }
+            ]);
+        }
+    }
+
+    editItem(itemId) {
+        this.showToast('Edit item feature coming soon!', 'info');
+    }
+
+    deleteItem(itemId) {
+        if (confirm('Are you sure you want to delete this item?')) {
+            try {
+                window.dataService.deleteInventoryItem(itemId);
+                this.showToast('Item deleted successfully!', 'success');
+                this.loadInventoryData();
+            } catch (error) {
+                this.showToast('Error deleting item: ' + error.message, 'error');
+            }
+        }
+    }
+
+    addVisit(customerId) {
+        this.showToast('Add visit feature coming soon!', 'info');
+    }
+
+    viewCustomerHistory(customerId) {
+        this.showToast('Customer history feature coming soon!', 'info');
+    }
+
+    editCustomer(customerId) {
+        this.showToast('Edit customer feature coming soon!', 'info');
+    }
+
+    deleteCustomer(customerId) {
+        if (confirm('Are you sure you want to delete this customer?')) {
+            try {
+                window.dataService.deleteCustomer(customerId);
+                this.showToast('Customer deleted successfully!', 'success');
+                this.loadCustomersData();
+            } catch (error) {
+                this.showToast('Error deleting customer: ' + error.message, 'error');
+            }
         }
     }
 }
