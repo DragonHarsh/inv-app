@@ -1275,6 +1275,248 @@ class App {
         this.closeModal();
     }
 
+    // Billing Methods
+    showItemSelector() {
+        window.itemSelector.show();
+    }
+
+    generateInvoice() {
+        try {
+            const currentInvoice = window.invoiceService.getCurrentInvoice();
+            
+            if (currentInvoice.items.length === 0) {
+                this.showToast('Please add items to the invoice first', 'warning');
+                return;
+            }
+
+            // Get customer info
+            const customerSelect = document.getElementById('invoice-customer');
+            const customerId = customerSelect ? customerSelect.value : null;
+            
+            // Get payment method (default to cash for now)
+            const paymentMethod = 'cash';
+            
+            // Get notes
+            const notes = '';
+
+            // Generate the invoice
+            const invoice = window.invoiceService.generateInvoice(paymentMethod, notes);
+            
+            this.showToast('Invoice generated successfully!', 'success');
+            
+            // Show invoice actions modal
+            this.showInvoiceActionsModal(invoice);
+            
+            // Refresh the billing view
+            this.loadBillingData();
+            
+        } catch (error) {
+            console.error('Error generating invoice:', error);
+            this.showToast('Error generating invoice: ' + error.message, 'error');
+        }
+    }
+
+    showInvoiceActionsModal(invoice) {
+        const modalContent = `
+            <div class="invoice-actions text-center">
+                <div class="mb-4">
+                    <h4 class="text-lg font-bold text-success">Invoice Generated Successfully!</h4>
+                    <p class="text-secondary">Invoice #${invoice.invoiceNumber}</p>
+                    <p class="text-lg font-bold">Total: ₹${invoice.total.toFixed(2)}</p>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <button class="btn btn-primary" onclick="app.printInvoice('${invoice.id}')">
+                        🖨️ Print Invoice
+                    </button>
+                    <button class="btn btn-success" onclick="app.shareViaWhatsApp('${invoice.id}')">
+                        📱 Share via WhatsApp
+                    </button>
+                    <button class="btn btn-warning" onclick="app.markAsUnpaid('${invoice.id}')">
+                        💰 Mark as Unpaid
+                    </button>
+                    <button class="btn btn-secondary" onclick="app.viewInvoiceDetails('${invoice.id}')">
+                        👁️ View Details
+                    </button>
+                </div>
+            </div>
+        `;
+
+        this.showModal('Invoice Actions', modalContent, [
+            { text: 'Close', class: 'btn-secondary', onclick: 'app.closeModal()' }
+        ]);
+    }
+
+    printInvoice(invoiceId) {
+        try {
+            const invoices = window.dataService.getInvoices();
+            const invoice = invoices.find(inv => inv.id === invoiceId);
+            
+            if (invoice) {
+                window.invoiceService.printInvoice(invoice);
+                this.showToast('Invoice sent to printer', 'success');
+            }
+        } catch (error) {
+            this.showToast('Error printing invoice: ' + error.message, 'error');
+        }
+        this.closeModal();
+    }
+
+    shareViaWhatsApp(invoiceId) {
+        try {
+            const invoices = window.dataService.getInvoices();
+            const invoice = invoices.find(inv => inv.id === invoiceId);
+            
+            if (invoice) {
+                // Get customer phone number if available
+                let phoneNumber = '';
+                if (invoice.customerId) {
+                    const customer = window.dataService.getCustomers().find(c => c.id === invoice.customerId);
+                    if (customer && customer.mobile) {
+                        phoneNumber = customer.mobile.replace(/\D/g, ''); // Remove non-digits
+                        if (!phoneNumber.startsWith('91')) {
+                            phoneNumber = '91' + phoneNumber; // Add India country code
+                        }
+                    }
+                }
+                
+                window.invoiceService.shareViaWhatsApp(invoice, phoneNumber);
+                this.showToast('WhatsApp opened with invoice details', 'success');
+            }
+        } catch (error) {
+            this.showToast('Error sharing via WhatsApp: ' + error.message, 'error');
+        }
+        this.closeModal();
+    }
+
+    markAsUnpaid(invoiceId) {
+        try {
+            window.invoiceService.markAsUnpaid(invoiceId);
+            this.showToast('Invoice marked as unpaid', 'warning');
+            this.loadBillingData();
+        } catch (error) {
+            this.showToast('Error updating invoice status: ' + error.message, 'error');
+        }
+        this.closeModal();
+    }
+
+    viewInvoiceDetails(invoiceId) {
+        const invoices = window.dataService.getInvoices();
+        const invoice = invoices.find(inv => inv.id === invoiceId);
+        
+        if (invoice) {
+            const customer = invoice.customerId ? 
+                window.dataService.getCustomers().find(c => c.id === invoice.customerId) : null;
+
+            const modalContent = `
+                <div class="invoice-details">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <h4 class="font-bold">Invoice Information</h4>
+                            <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
+                            <p><strong>Date:</strong> ${new Date(invoice.createdAt).toLocaleDateString()}</p>
+                            <p><strong>Status:</strong> <span class="badge badge-${invoice.paymentStatus === 'paid' ? 'in-stock' : 'expired'}">${invoice.paymentStatus.toUpperCase()}</span></p>
+                        </div>
+                        <div>
+                            <h4 class="font-bold">Customer Information</h4>
+                            <p><strong>Name:</strong> ${invoice.customerName}</p>
+                            ${customer?.mobile ? `<p><strong>Phone:</strong> ${customer.mobile}</p>` : ''}
+                            ${customer?.email ? `<p><strong>Email:</strong> ${customer.email}</p>` : ''}
+                        </div>
+                    </div>
+                    
+                    <h4 class="font-bold mb-2">Items</h4>
+                    <div class="table-container mb-4">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Qty</th>
+                                    <th>Price</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${invoice.items.map(item => `
+                                    <tr>
+                                        <td>${item.name}</td>
+                                        <td>${item.quantity} ${item.unit}</td>
+                                        <td>₹${item.price.toFixed(2)}</td>
+                                        <td>₹${item.total.toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="totals text-right">
+                        <p>Subtotal: ₹${invoice.subtotal.toFixed(2)}</p>
+                        ${invoice.discount > 0 ? `<p>Discount: -₹${invoice.discount.toFixed(2)}</p>` : ''}
+                        <p>GST: ₹${invoice.gstAmount.toFixed(2)}</p>
+                        <p class="font-bold text-lg">Total: ₹${invoice.total.toFixed(2)}</p>
+                    </div>
+                </div>
+            `;
+
+            this.showModal('Invoice Details', modalContent, [
+                { text: 'Print', class: 'btn-primary', onclick: `app.printInvoice('${invoice.id}')` },
+                { text: 'Close', class: 'btn-secondary', onclick: 'app.closeModal()' }
+            ]);
+        }
+    }
+
+    clearInvoice() {
+        window.invoiceService.clearCurrentInvoice();
+        window.itemSelector.updateBillingView();
+        this.showToast('Invoice cleared', 'info');
+    }
+
+    showInvoiceHistory() {
+        const invoices = window.dataService.getInvoices();
+        const recentInvoices = invoices.slice(-10).reverse(); // Last 10 invoices
+
+        const modalContent = `
+            <div class="invoice-history">
+                ${recentInvoices.length === 0 ? 
+                    '<p class="text-center text-secondary py-4">No invoices found</p>' :
+                    `<div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Customer</th>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${recentInvoices.map(invoice => `
+                                    <tr>
+                                        <td>${invoice.invoiceNumber}</td>
+                                        <td>${invoice.customerName}</td>
+                                        <td>${new Date(invoice.createdAt).toLocaleDateString()}</td>
+                                        <td>₹${invoice.total.toFixed(2)}</td>
+                                        <td><span class="badge badge-${invoice.paymentStatus === 'paid' ? 'in-stock' : 'expired'}">${invoice.paymentStatus.toUpperCase()}</span></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-secondary" onclick="app.viewInvoiceDetails('${invoice.id}')">View</button>
+                                            <button class="btn btn-sm btn-primary" onclick="app.printInvoice('${invoice.id}')">Print</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>`
+                }
+            </div>
+        `;
+
+        this.showModal('Invoice History', modalContent, [
+            { text: 'Close', class: 'btn-secondary', onclick: 'app.closeModal()' }
+        ]);
+    }
+
     addCategory() {
         const input = document.getElementById('new-category');
         if (input && input.value.trim()) {

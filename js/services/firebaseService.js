@@ -1,15 +1,15 @@
 // Firebase Service - Handles dual Firebase setup and subscription management
 class FirebaseService {
     constructor() {
-        // Admin Firebase configuration (managed by you)
+        // Admin Firebase configuration (your actual config)
         this.adminConfig = {
-            apiKey: "AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", // Replace with your admin Firebase config
-            authDomain: "admin-clinic-manager.firebaseapp.com",
-            databaseURL: "https://admin-clinic-manager-default-rtdb.firebaseio.com",
-            projectId: "admin-clinic-manager",
-            storageBucket: "admin-clinic-manager.appspot.com",
-            messagingSenderId: "123456789012",
-            appId: "1:123456789012:web:abcdefghijklmnop"
+            apiKey: "AIzaSyAkjHR0oF32dAZ24TuWZ5sIOUjqD7HjXbg",
+            authDomain: "invapp-d374e.firebaseapp.com",
+            databaseURL: "https://invapp-d374e-default-rtdb.firebaseio.com",
+            projectId: "invapp-d374e",
+            storageBucket: "invapp-d374e.firebasestorage.app",
+            messagingSenderId: "457473009263",
+            appId: "1:457473009263:web:840a155753ae52aa09cf9a"
         };
         
         this.clinicApp = null;
