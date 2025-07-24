@@ -382,3 +382,4 @@ class FirebaseService {
 }
 
 // Initialize and make globally available
+window.firebaseService = new FirebaseService();
