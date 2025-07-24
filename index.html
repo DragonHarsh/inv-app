@@ -98,7 +98,81 @@
     <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
 
+    <!-- Firebase Config Input Screen -->
+    <div id="firebase-config-screen" class="modal-container hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Firebase Configuration</h3>
+                <button class="modal-close" onclick="app.closeFirebaseConfigModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p class="text-secondary mb-3">Enter your Firebase project credentials to connect your clinic data:</p>
+                <form id="firebase-config-form">
+                    <div class="form-group">
+                        <label for="firebase-apiKey">API Key *</label>
+                        <input type="text" id="firebase-apiKey" placeholder="Enter your API key" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="firebase-projectId">Project ID *</label>
+                        <input type="text" id="firebase-projectId" placeholder="Enter your Project ID" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="firebase-databaseURL">Database URL *</label>
+                        <input type="url" id="firebase-databaseURL" placeholder="https://your-project.firebaseio.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="firebase-authDomain">Auth Domain *</label>
+                        <input type="text" id="firebase-authDomain" placeholder="your-project.firebaseapp.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="firebase-storageBucket">Storage Bucket *</label>
+                        <input type="text" id="firebase-storageBucket" placeholder="your-project.appspot.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="firebase-appId">App ID (optional)</label>
+                        <input type="text" id="firebase-appId" placeholder="Enter your App ID">
+                    </div>
+                </form>
+                <div id="firebase-config-message" class="mt-3" style="color: var(--error-color); font-weight: 500;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeFirebaseConfigModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="app.saveAndTestFirebaseConfig()">Save & Test</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subscription Expired Screen -->
+    <div id="subscription-expired-screen" class="modal-container hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Subscription Expired</h3>
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <div class="text-6xl mb-4">⚠️</div>
+                    <h4 class="mb-3">Your subscription has expired</h4>
+                    <p class="text-secondary mb-4">Your subscription is either inactive or has expired. Please contact support to renew your subscription and continue using the application.</p>
+                    <div class="bg-tertiary p-4 rounded mb-4">
+                        <p class="text-sm"><strong>Need help?</strong></p>
+                        <p class="text-sm">Contact our support team for subscription renewal assistance.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.logout()">Logout</button>
+                <button class="btn btn-primary" onclick="app.retrySubscriptionCheck()">Retry</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
     <!-- Scripts -->
+    <script src="js/services/firebaseService.js"></script>
     <script src="js/app.js"></script>
     <script src="js/services/dataService.js"></script>
     <script src="js/services/invoiceService.js"></script>
